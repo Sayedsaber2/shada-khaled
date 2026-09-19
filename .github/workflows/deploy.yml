@@ -1,0 +1,54 @@
+# Builds the site and publishes it to GitHub Pages every time `master` is pushed.
+#
+# One-time setup (do this once, in the GitHub UI):
+#   Repo → Settings → Pages → "Build and deployment" → Source: "GitHub Actions"
+#
+# After that, every push to master redeploys automatically — no manual steps.
+# The live URL will be: https://<your-username>.github.io/shada-khaled/
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  # Lets you re-run a deploy by hand from the Actions tab, without a new commit
+  workflow_dispatch:
+
+# Minimum permissions Pages deployment needs
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deploy at a time; a newer push cancels an older, still-running one
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
